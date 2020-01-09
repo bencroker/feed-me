@@ -20,47 +20,10 @@ class AssetHelper
     {
         $assetDownloadCurl = Plugin::$plugin->getSettings()->assetDownloadCurl;
 
-        // Provide some legacy support
-        if ($assetDownloadCurl) {
-            $ch = curl_init($srcName);
-            $fp = fopen($dstName, 'wb');
+        $client = Craft::createGuzzleClient();
+        $response = $client->request('GET', $srcName, ['sink' => $dstName]);
 
-            curl_setopt($ch, CURLOPT_FILE, $fp);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-
-            curl_exec($ch);
-            curl_close($ch);
-
-            return fclose($fp);
-        } else {
-            $chunksize = $chunkSize * (1024 * 1024);
-            $bytesCount = 0;
-            $handle = fopen($srcName, 'rb');
-            $fp = fopen($dstName, 'w');
-
-            if ($handle === false) {
-                return false;
-            }
-
-            while (!feof($handle)) {
-                $data = fread($handle, $chunksize);
-                fwrite($fp, $data, strlen($data));
-
-                if ($returnbytes) {
-                    $bytesCount += strlen($data);
-                }
-            }
-
-            $status = fclose($handle);
-
-            fclose($fp);
-
-            if ($returnbytes && $status) {
-                return $bytesCount;
-            }
-
-            return $status;
-        }
+        return $response->getStatusCode() == 200;
     }
 
     public static function fetchRemoteImage($urls, $fieldInfo, $feed, $field = null, $element = null, $folderId = null)
